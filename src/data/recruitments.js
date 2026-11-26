@@ -11,6 +11,16 @@ export const sampleRecruitments = [
   { id: 'study-planner', category: '프로젝트', daysLeft: 18, title: '공부 루틴을 기록하는 웹 서비스 같이 만들어요', organizer: '학생 사이드 프로젝트', description: '작은 기능부터 만들어 실제 친구들에게 사용해 보려고 해요.', roles: ['백엔드', '디자인'], people: 2, contact: 'study@example.com', url: 'https://example.com', content: '학습 목표와 루틴을 함께 기록하는 웹 서비스를 기획하고 개발합니다.' },
   { id: 'data-challenge', category: '해커톤', daysLeft: 4, title: '공공데이터 해커톤에 나갈 데이터 분석가를 찾아요', organizer: '공공데이터 활용 해커톤', description: '데이터에서 의미를 찾고 팀의 아이디어를 함께 구체화해요.', roles: ['데이터 분석', 'Python'], people: 1, contact: 'publicdata@example.com', url: 'https://example.com', content: '공공데이터를 살펴보고 해커톤 주제와 해결 방법을 함께 정합니다.' },
   { id: 'accessibility', category: '공모전', daysLeft: 21, title: '접근성 개선 아이디어 공모전 기획 팀원 모집', organizer: '디지털 포용 아이디어 공모전', description: '더 많은 사람이 편하게 쓸 수 있는 서비스를 함께 고민해요.', roles: ['서비스 기획', 'UI/UX'], people: 2, contact: 'access@example.com', url: 'https://example.com', content: '접근성 문제를 발견하고 누구나 쓰기 쉬운 개선안을 제안합니다.' },
+  { id: 'school-event', category: '기타', daysLeft: 10, title: '교내 행사 소개 페이지를 함께 만들 팀원을 찾아요', organizer: '학생 자율 프로젝트', description: '학교 행사를 한눈에 볼 수 있는 작은 웹페이지를 만들어봐요.', roles: ['일러스트', '프론트엔드'], people: '2~3명', contact: 'event@example.com', url: 'https://example.com', content: '교내 행사 정보를 모아 보여주는 페이지를 함께 기획하고 제작합니다.' },
 ]
 
-export const categories = ['전체', '해커톤', '공모전', '프로젝트']
+export const categories = ['전체', '해커톤', '공모전', '프로젝트', '기타']
+
+export function categoryClassName(category) {
+  return ['해커톤', '공모전', '프로젝트', '기타'].includes(category) ? `category--${category}` : 'category--기타'
+}
+
+export function formatPeople(people) {
+  const value = String(people ?? '').trim()
+  return /^\d+$/.test(value) ? `${value}명` : value
+}
