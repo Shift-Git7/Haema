@@ -1,6 +1,6 @@
 # Haema Backend (Auth and profile)
 
-Node.js + Express backend for Haema. Supabase Auth handles account creation, email confirmation, password sign-in, and access tokens. This backend covers authentication, private profile/record endpoints, public board reads, and account withdrawal. Board creation and application submission are not implemented yet.
+Node.js + Express backend for Haema. Supabase Auth handles account creation, email confirmation, password sign-in, and access tokens. This backend covers authentication, private profile/record endpoints, authenticated board reads, and account withdrawal. Board creation and application submission are not implemented yet.
 
 ## Requirements
 
@@ -80,13 +80,14 @@ Requires the bearer token and `SUPABASE_SERVICE_ROLE_KEY`. Deletes the signed-in
 
 This backend does not use Sequelize. Supabase Auth and `supabase-js` cover the current auth/profile scope with less connection and authorization setup. If the project later needs complex relational queries, an ORM can be added then; for Supabase, evaluate Prisma alongside Sequelize and keep RLS/ownership checks explicit.
 
-## Public board read APIs
+## Board read APIs (login required)
 
-- `GET /common/board?limit=20&offset=0`: returns the newest boards first. `limit` defaults to 20 and must be 1–100; `offset` defaults to 0. It is public so visitors can browse before logging in.
-- `GET /common/board/:id`: returns a single public board or 404. The response includes event name, deadline, original event URL, post title, recruiting content, headcount, and the contact email entered in the post. It does not include the author's user ID or signup email. No comment data is returned.
+- `GET /common/board?limit=20&offset=0`: returns the newest boards first. `limit` defaults to 20 and must be 1–100; `offset` defaults to 0. Requires `Authorization: Bearer <accessToken>`; unauthenticated requests receive 401.
+- `GET /common/board/:id`: requires a bearer access token and returns a single board or 404. The response includes event name, deadline, original event URL, post title, recruiting content, headcount, and the contact email entered in the post. It does not include the author's user ID or signup email. No comment data is returned.
 
 ## My Page activity response
 
 `GET /common/mypage/:id` now returns `profile`, `createdBoards`, and `appliedBoards`. The requested ID must match the verified access-token user. Each applied board includes the application status (`pending`, `accepted`, or `rejected`) and its Korean display label. Lists are empty until board and application records exist.
 
 The board/application migration creates read models for these lists. Board creation and application submission APIs are outside this implementation scope.
+

@@ -185,8 +185,10 @@ test('login returns access token only', async () => {
   assert.equal(JSON.stringify(payload).includes('mock-refresh-token-must-not-leak'), false);
 });
 
-test('reads public board list newest first with pagination and hides author identity', async () => {
-  const response = await fetch(`${apiUrl}/common/board?limit=5&offset=10`);
+test('requires login to read board list and hides author identity', async () => {
+  const anonymousResponse = await fetch(`${apiUrl}/common/board?limit=5&offset=10`);
+  assert.equal(anonymousResponse.status, 401);
+  const response = await fetch(`${apiUrl}/common/board?limit=5&offset=10`, { headers: { authorization: 'Bearer mock-access-token' } });
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.deepEqual(payload.pagination, { limit: 5, offset: 10 });
@@ -201,15 +203,18 @@ test('reads public board list newest first with pagination and hides author iden
   assert.equal(lastBoardQuery.get('limit'), '5');
 });
 
-test('reads board detail and rejects malformed board IDs', async () => {
-  const response = await fetch(`${apiUrl}/common/board/${boardId}`);
+test('requires login to read board detail and rejects malformed board IDs', async () => {
+  const anonymousResponse = await fetch(`${apiUrl}/common/board/${boardId}`);
+  assert.equal(anonymousResponse.status, 401);
+  const headers = { authorization: 'Bearer mock-access-token' };
+  const response = await fetch(`${apiUrl}/common/board/${boardId}`, { headers });
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.board.title, '프론트엔드 팀원 모집');
   assert.equal(payload.board.sourceUrl, 'https://example.com/event');
   assert.equal('owner_id' in payload.board, false);
 
-  const invalidId = await fetch(`${apiUrl}/common/board/not-a-uuid`);
+  const invalidId = await fetch(`${apiUrl}/common/board/not-a-uuid`, { headers });
   assert.equal(invalidId.status, 400);
 });
 
@@ -252,3 +257,4 @@ test('withdraws the authenticated account through Supabase admin API', async () 
   });
   assert.equal(response.status, 204);
 });
+

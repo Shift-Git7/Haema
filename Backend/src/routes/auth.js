@@ -54,7 +54,7 @@ authRouter.post('/sign-up', async (req, res, next) => {
     if (config.emailRedirectUrl) options.emailRedirectTo = config.emailRedirectUrl;
     const { data, error } = await supabase.auth.signUp({ email, password, options });
     if (error) {
-      // Keep the response generic to avoid disclosing whether an account already exists.
+      // 계정 존재 여부가 노출되지 않도록 동일한 오류 메시지를 반환합니다.
       console.warn('Supabase signup error:', error.code ?? 'unknown');
       return res.status(400).json({ error: '회원가입을 처리하지 못했습니다. 이메일과 입력 내용을 확인해 주세요.' });
     }

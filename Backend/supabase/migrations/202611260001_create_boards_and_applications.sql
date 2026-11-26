@@ -29,8 +29,8 @@ create table if not exists public.applications (
 create index if not exists applications_applicant_created_at_idx on public.applications (applicant_id, created_at desc);
 create index if not exists applications_board_created_at_idx on public.applications (board_id, created_at desc);
 
--- Board and application rows are exposed only through the Express API.
--- Keep the service-role key on the server and scope private queries to the verified user ID.
+-- 게시글과 지원 내역은 Express API를 통해서만 조회합니다.
+-- service-role 키는 서버에만 보관하고, 개인 정보 조회는 인증된 사용자 ID로 제한합니다.
 alter table public.boards enable row level security;
 alter table public.applications enable row level security;
 revoke all on table public.boards, public.applications from anon, authenticated;

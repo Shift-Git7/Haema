@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { createAdminClient } from '../lib/supabase.js';
+import { requireAuth } from '../middleware/requireAuth.js';
 
 export const boardRouter = Router();
+boardRouter.use(requireAuth);
 const BOARD_FIELDS = 'id, event_name, deadline, source_url, title, recruiting_content, recruitment_count, contact_email, created_at';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -14,7 +16,7 @@ function toPublicBoard(row) {
     title: row.title,
     recruitingContent: row.recruiting_content,
     recruitmentCount: row.recruitment_count,
-    // This is the separate contact entered in the public post, not signup email.
+    // 회원가입 이메일이 아니라 게시글에 별도로 입력한 연락처입니다.
     contactEmail: row.contact_email,
     createdAt: row.created_at,
   };
@@ -59,3 +61,4 @@ boardRouter.get('/board/:id', async (req, res, next) => {
     return next(error);
   }
 });
+

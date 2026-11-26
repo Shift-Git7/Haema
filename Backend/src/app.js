@@ -13,10 +13,10 @@ app.use(express.json({ limit: '32kb' }));
 
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 app.use('/common', authRouter);
-// Board reads are public; mount before the profile router's authentication middleware.
+// 게시판 조회도 로그인한 사용자만 이용할 수 있습니다.
 app.use('/common', boardRouter);
-app.use('/common', profileRouter);
 app.use('/common', accountRouter);
+app.use('/common', profileRouter);
 
 app.use((err, _req, res, _next) => {
   console.error('Unhandled API error:', err?.message ?? 'unknown');
