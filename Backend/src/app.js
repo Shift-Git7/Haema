@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { config } from './config.js';
 import { authRouter } from './routes/auth.js';
+import { boardRouter } from './routes/board.js';
 import { profileRouter } from './routes/profile.js';
 import { accountRouter } from './routes/account.js';
 
@@ -12,8 +13,10 @@ app.use(express.json({ limit: '32kb' }));
 
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 app.use('/common', authRouter);
-app.use('/common', profileRouter);
+// 게시판 조회도 로그인한 사용자만 이용할 수 있습니다.
+app.use('/common', boardRouter);
 app.use('/common', accountRouter);
+app.use('/common', profileRouter);
 
 app.use((err, _req, res, _next) => {
   console.error('Unhandled API error:', err?.message ?? 'unknown');

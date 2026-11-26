@@ -1,6 +1,6 @@
 # Haema Backend (Auth and profile)
 
-Node.js + Express backend for Haema. Supabase Auth handles account creation, email confirmation, password sign-in, and access tokens. This first backend slice covers authentication, private profile/record endpoints, and account withdrawal; it does not implement board or application APIs.
+Node.js + Express backend for Haema. Supabase Auth handles account creation, email confirmation, password sign-in, and access tokens. This backend covers authentication, private profile/record endpoints, authenticated board reads, and account withdrawal. Board creation and application submission are not implemented yet.
 
 ## Requirements
 
@@ -12,10 +12,10 @@ Node.js + Express backend for Haema. Supabase Auth handles account creation, ema
 
 1. Create a project in Supabase and save its database password.
 2. In Project Settings > API, copy the Project URL and the publishable key (or legacy anon key). Put them in `.env` as `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
-3. Copy `.env.example` to `.env`. Keep `SUPABASE_SERVICE_ROLE_KEY` empty until enabling account withdrawal. If used, this secret must stay on the backend and must never be sent to the frontend.
+3. Copy `.env.example` to `.env` and set `SUPABASE_SERVICE_ROLE_KEY`. Board reads and My Page activity queries use this server-only secret; never send it to the frontend.
 4. In Authentication settings, enable email signups and turn on **Confirm email**.
 5. In Authentication > URL Configuration, configure the frontend Site URL and allowed Redirect URLs. If using a custom confirmation destination, set `EMAIL_REDIRECT_URL` to that URL and allow it in Supabase.
-6. Open SQL Editor and run `supabase/migrations/202611240001_create_profiles.sql`.
+6. Open SQL Editor and run both files in `supabase/migrations` in timestamp order.
 7. For real user delivery, configure custom SMTP in Supabase Auth. Built-in email delivery may be rate-limited.
 8. Install and run:
 
@@ -73,9 +73,21 @@ Requires the bearer token and `SUPABASE_SERVICE_ROLE_KEY`. Deletes the signed-in
 
 - Signup email is stored by Supabase Auth and is not returned by profile endpoints.
 - Public profiles are not enabled. Row Level Security limits profile reads and updates to the authenticated owner.
-- A recruiting post's contact method is separate from the signup email. The future board API should store and expose a post contact field only when the poster explicitly enters it.
+- A recruiting post's contact method is separate from the signup email. Board responses expose only the contact email entered in that post and omit the author ID and signup email.
 - API database operations for records use the caller's bearer token so Supabase RLS is applied.
 
 ## ORM choice
 
 This backend does not use Sequelize. Supabase Auth and `supabase-js` cover the current auth/profile scope with less connection and authorization setup. If the project later needs complex relational queries, an ORM can be added then; for Supabase, evaluate Prisma alongside Sequelize and keep RLS/ownership checks explicit.
+
+## Board read APIs (login required)
+
+- `GET /common/board?limit=20&offset=0`: returns the newest boards first. `limit` defaults to 20 and must be 1–100; `offset` defaults to 0. Requires `Authorization: Bearer <accessToken>`; unauthenticated requests receive 401.
+- `GET /common/board/:id`: requires a bearer access token and returns a single board or 404. The response includes event name, deadline, original event URL, post title, recruiting content, headcount, and the contact email entered in the post. It does not include the author's user ID or signup email. No comment data is returned.
+
+## My Page activity response
+
+`GET /common/mypage/:id` now returns `profile`, `createdBoards`, and `appliedBoards`. The requested ID must match the verified access-token user. Each applied board includes the application status (`pending`, `accepted`, or `rejected`) and its Korean display label. Lists are empty until board and application records exist.
+
+The board/application migration creates read models for these lists. Board creation and application submission APIs are outside this implementation scope.
+

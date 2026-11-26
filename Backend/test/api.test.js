@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 
 const userId = '11111111-1111-4111-8111-111111111111';
+const boardId = '22222222-2222-4222-8222-222222222222';
+const applicationId = '33333333-3333-4333-8333-333333333333';
 const user = {
   id: userId,
   aud: 'authenticated',
@@ -12,11 +14,40 @@ const user = {
   user_metadata: { major: '컴퓨터공학', awards: '해커톤 우수상' },
   created_at: '2026-01-01T00:00:00.000Z',
 };
+const board = {
+  id: boardId,
+  owner_id: userId,
+  event_name: '대덕 해커톤',
+  deadline: '2026-12-20',
+  source_url: 'https://example.com/event',
+  title: '프론트엔드 팀원 모집',
+  recruiting_content: 'React 경험자를 모집합니다.',
+  recruitment_count: 2,
+  contact_email: 'team-contact@example.com',
+  created_at: '2026-11-25T10:00:00.000Z',
+};
+const application = {
+  id: applicationId,
+  status: 'accepted',
+  created_at: '2026-11-26T10:00:00.000Z',
+  board: {
+    id: boardId,
+    event_name: board.event_name,
+    title: board.title,
+    deadline: board.deadline,
+    source_url: board.source_url,
+    recruitment_count: board.recruitment_count,
+    created_at: board.created_at,
+  },
+};
 let fakeSupabase;
 let api;
 let apiUrl;
 let lastSignupBody;
 let lastProfileUpdate;
+let lastBoardQuery;
+let lastBoardRange;
+let lastApplicationQuery;
 
 function listen(server) {
   return new Promise((resolve, reject) => {
@@ -76,8 +107,21 @@ before(async () => {
       lastProfileUpdate = body;
       return send(200, { id: userId, major: body.major ?? '컴퓨터공학', awards: body.awards ?? '해커톤 우수상' });
     }
+    if (url.pathname === '/rest/v1/boards' && req.method === 'GET') {
+      lastBoardQuery = url.searchParams;
+      lastBoardRange = req.headers.range;
+      if (url.searchParams.has('id')) return send(200, board);
+      return send(200, [board]);
+    }
+    if (url.pathname === '/rest/v1/applications' && req.method === 'GET') {
+      lastApplicationQuery = url.searchParams;
+      return send(200, [application]);
+    }
     if (req.method === 'GET' && url.pathname === `/auth/v1/admin/users/${userId}`) return send(200, user);
-    if (req.method === 'DELETE' && url.pathname === `/auth/v1/admin/users/${userId}`){ res.writeHead(204); return res.end(); }
+    if (req.method === 'DELETE' && url.pathname === `/auth/v1/admin/users/${userId}`) {
+      res.writeHead(204);
+      return res.end();
+    }
     return send(404, { message: `Unhandled mock request ${req.method} ${url.pathname}` });
   });
 
@@ -141,15 +185,63 @@ test('login returns access token only', async () => {
   assert.equal(JSON.stringify(payload).includes('mock-refresh-token-must-not-leak'), false);
 });
 
-test('protects profile routes and allows only the token owner to edit records', async () => {
+test('requires login to read board list and hides author identity', async () => {
+  const anonymousResponse = await fetch(`${apiUrl}/common/board?limit=5&offset=10`);
+  assert.equal(anonymousResponse.status, 401);
+  const response = await fetch(`${apiUrl}/common/board?limit=5&offset=10`, { headers: { authorization: 'Bearer mock-access-token' } });
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.deepEqual(payload.pagination, { limit: 5, offset: 10 });
+  assert.equal(payload.items.length, 1);
+  assert.equal(payload.items[0].eventName, '대덕 해커톤');
+  assert.equal(payload.items[0].deadline, '2026-12-20');
+  assert.equal(payload.items[0].contactEmail, 'team-contact@example.com');
+  assert.equal('owner_id' in payload.items[0], false);
+  assert.equal('ownerId' in payload.items[0], false);
+  assert.equal(lastBoardQuery.get('order'), 'created_at.desc');
+  assert.equal(lastBoardQuery.get('offset'), '10');
+  assert.equal(lastBoardQuery.get('limit'), '5');
+});
+
+test('requires login to read board detail and rejects malformed board IDs', async () => {
+  const anonymousResponse = await fetch(`${apiUrl}/common/board/${boardId}`);
+  assert.equal(anonymousResponse.status, 401);
+  const headers = { authorization: 'Bearer mock-access-token' };
+  const response = await fetch(`${apiUrl}/common/board/${boardId}`, { headers });
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.board.title, '프론트엔드 팀원 모집');
+  assert.equal(payload.board.sourceUrl, 'https://example.com/event');
+  assert.equal('owner_id' in payload.board, false);
+
+  const invalidId = await fetch(`${apiUrl}/common/board/not-a-uuid`, { headers });
+  assert.equal(invalidId.status, 400);
+});
+
+test('returns private my page activity only to the matching authenticated user', async () => {
+  const headers = { authorization: 'Bearer mock-access-token' };
+  const response = await fetch(`${apiUrl}/common/mypage/${userId}`, { headers });
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.profile.major, '컴퓨터공학');
+  assert.equal(payload.createdBoards[0].eventName, '대덕 해커톤');
+  assert.equal(payload.appliedBoards[0].status, 'accepted');
+  assert.equal(payload.appliedBoards[0].statusLabel, '합격');
+  assert.equal('email' in payload.profile, false);
+  assert.equal(lastBoardQuery.get('owner_id'), `eq.${userId}`);
+  assert.equal(lastApplicationQuery.get('applicant_id'), `eq.${userId}`);
+
+  const foreignPage = await fetch(`${apiUrl}/common/mypage/22222222-2222-4222-8222-222222222222`, { headers });
+  assert.equal(foreignPage.status, 403);
+  assert.equal((await fetch(`${apiUrl}/common/mypage/${userId}`)).status, 401);
+});
+
+test('protects record routes and only changes profile fields', async () => {
   assert.equal((await fetch(`${apiUrl}/common/record`)).status, 401);
   const headers = { authorization: 'Bearer mock-access-token' };
   const record = await fetch(`${apiUrl}/common/record`, { headers });
   assert.equal(record.status, 200);
   assert.deepEqual(await record.json(), { record: { major: '컴퓨터공학', awards: '해커톤 우수상' } });
-
-  const foreignPage = await fetch(`${apiUrl}/common/mypage/22222222-2222-4222-8222-222222222222`, { headers });
-  assert.equal(foreignPage.status, 403);
 
   const update = await fetch(`${apiUrl}/common/record/${userId}`, {
     method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' },
@@ -165,3 +257,4 @@ test('withdraws the authenticated account through Supabase admin API', async () 
   });
   assert.equal(response.status, 204);
 });
+
