@@ -5,6 +5,7 @@ import { authRouter } from './routes/auth.js';
 import { boardRouter } from './routes/board.js';
 import { profileRouter } from './routes/profile.js';
 import { accountRouter } from './routes/account.js';
+import { applicationRouter } from './routes/application.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -17,6 +18,8 @@ app.use('/common', authRouter);
 app.use('/common', boardRouter);
 app.use('/common', accountRouter);
 app.use('/common', profileRouter);
+// 지원자 전용 지원/상태/취소 엔드포인트
+app.use('/app', applicationRouter);
 
 app.use((err, _req, res, _next) => {
   console.error('Unhandled API error:', err?.message ?? 'unknown');
