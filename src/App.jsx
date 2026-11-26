@@ -11,6 +11,14 @@ import { categories, categoryClassName, sampleRecruitments } from './data/recrui
 const STORAGE_KEY = 'haema-recruitments-v1'
 const APPLICATIONS_KEY = 'haema-applications-v1'
 const SAMPLE_VERSION_KEY = 'haema-sample-version'
+const APPLICATIONS_SEED_VERSION_KEY = 'haema-applications-seed-version'
+
+const sampleApplications = [
+  { id: 'sample-application-1', recruitmentId: 'junction-asia', title: '2025 Junction Asia 함께할 프론트엔드 팀원을 찾아요', applicantId: 'demo-student-1', applicantName: '김하늘', introduction: 'React 프로젝트를 진행한 경험이 있어요. 팀과 함께 아이디어를 빠르게 구현하고 싶습니다.', status: 'pending' },
+  { id: 'sample-application-2', recruitmentId: 'junction-asia', title: '2025 Junction Asia 함께할 프론트엔드 팀원을 찾아요', applicantId: 'demo-student-2', applicantName: '박민서', introduction: '디자인 시스템을 적용한 웹 앱을 만들어 봤어요. 맡은 일을 책임감 있게 끝내겠습니다.', status: 'pending' },
+  { id: 'sample-my-application-1', recruitmentId: 'kosac', title: '대학생 광고 공모전 기획·마케팅 팀원 모집', applicantId: 'me', applicantName: '플랑크톤', introduction: '시장 조사 경험을 살려 아이디어를 함께 구체화하고 싶습니다.', status: 'accepted' },
+  { id: 'sample-my-application-2', recruitmentId: 'campus-app', title: '캠퍼스 생활 개선 앱, 백엔드 개발자를 찾습니다', applicantId: 'me', applicantName: '플랑크톤', introduction: '사용하기 쉬운 교내 서비스를 팀과 함께 만들고 싶어요.', status: 'pending' },
+]
 
 function readStorage(key, fallback) {
   // Next.js can render on the server, where browser storage is unavailable.
@@ -25,19 +33,49 @@ function readStorage(key, fallback) {
 
 function loadRecruitments() {
   const saved = readStorage(STORAGE_KEY, null)
-  if (!saved) return sampleRecruitments.map((item, index) => ({ ...item, createdAt: sampleRecruitments.length - index }))
+  if (!saved) {
+    if (typeof window !== 'undefined') window.localStorage.setItem(SAMPLE_VERSION_KEY, '4')
+    return sampleRecruitments.map((item, index) => ({ ...item, createdAt: sampleRecruitments.length - index }))
+  }
+
+  const normalized = saved.map((item) => item.id === 'junction-asia' && !item.owner ? { ...item, owner: 'me' } : item)
 
   // Add the new examples once for people who already opened an earlier preview.
-  if (typeof window !== 'undefined' && window.localStorage.getItem(SAMPLE_VERSION_KEY) !== '3') {
-    const savedIds = new Set(saved.map((item) => item.id))
+  if (typeof window !== 'undefined' && window.localStorage.getItem(SAMPLE_VERSION_KEY) !== '4') {
+    const savedIds = new Set(normalized.map((item) => item.id))
     const addedSamples = sampleRecruitments
       .filter((item) => !savedIds.has(item.id))
       .map((item, index) => ({ ...item, createdAt: -index - 1 }))
-    window.localStorage.setItem(SAMPLE_VERSION_KEY, '3')
-    return [...saved, ...addedSamples]
+    window.localStorage.setItem(SAMPLE_VERSION_KEY, '4')
+    return [...normalized, ...addedSamples]
   }
 
-  return saved
+  return normalized
+}
+
+function loadApplications() {
+  const saved = readStorage(APPLICATIONS_KEY, null)
+  if (!saved) {
+    if (typeof window !== 'undefined') window.localStorage.setItem(APPLICATIONS_SEED_VERSION_KEY, '1')
+    return sampleApplications
+  }
+
+  // Older previews stored a contact field. Applications now use the applicant profile instead.
+  const normalized = saved.map(({ contact, ...application }) => ({
+    ...application,
+    applicantId: application.applicantId ?? 'me',
+    applicantName: application.applicantName ?? '플랑크톤',
+    status: application.status ?? 'pending',
+  }))
+
+  if (typeof window !== 'undefined' && window.localStorage.getItem(APPLICATIONS_SEED_VERSION_KEY) !== '1') {
+    const savedIds = new Set(normalized.map((application) => application.id))
+    const newExamples = sampleApplications.filter((application) => !savedIds.has(application.id))
+    window.localStorage.setItem(APPLICATIONS_SEED_VERSION_KEY, '1')
+    return [...normalized, ...newExamples]
+  }
+
+  return normalized
 }
 
 function PageHeading({ eyebrow, title, children }) {
@@ -160,36 +198,65 @@ function CreatePage({ initialRecruitment, onSave, onCancel }) {
   </main>
 }
 
-function MyPage({ recruitments, applications, onDelete, onOpenPost, onEditPost, onLogout, onWithdraw }) {
+function PasswordChangeForm() {
+  const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' })
+  const [message, setMessage] = useState('')
+  function submit(event) {
+    event.preventDefault()
+    if (passwords.next !== passwords.confirm) {
+      setMessage('새 비밀번호와 확인 값이 일치하지 않아요.')
+      return
+    }
+    setMessage('비밀번호 변경 화면은 준비됐어요. 실제 변경은 백엔드 비밀번호 변경 API 연결 후 사용할 수 있어요.')
+  }
+  return <form className="password-change-form" onSubmit={submit}>
+    <label>현재 비밀번호<input required type="password" autoComplete="current-password" value={passwords.current} onChange={(event) => setPasswords({ ...passwords, current: event.target.value })} /></label>
+    <label>새 비밀번호<input required type="password" minLength="10" autoComplete="new-password" value={passwords.next} onChange={(event) => setPasswords({ ...passwords, next: event.target.value })} /></label>
+    <label>새 비밀번호 확인<input required type="password" minLength="10" autoComplete="new-password" value={passwords.confirm} onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })} /></label>
+    {message && <p className="password-change-message" role="status">{message}</p>}
+    <button className="button button--primary">비밀번호 변경</button>
+  </form>
+}
+
+function getApplicationStatusLabel(status) {
+  if (status === 'accepted') return '수락'
+  if (status === 'rejected') return '거절'
+  return '검토 중'
+}
+
+function MyPage({ recruitments, applications, onDelete, onOpenPost, onEditPost, onDecideApplication, onLogout, onWithdraw }) {
   const [tab, setTab] = useState('posts')
   const [selectedApplication, setSelectedApplication] = useState(null)
   const [profile, setProfile] = useState(() => readStorage('haema-profile-v1', { name: '플랑크톤', email: 'haemin@university.ac.kr', major: '프론트엔드, 백엔드', skills: 'Python, Spring Boot', awards: '' }))
   const mine = recruitments.filter((item) => item.owner === 'me')
-  return <main className="dashboard"><aside className="sidebar"><div className="profile-summary"><div className="profile-avatar">플</div><span>반가워요,</span><strong>{profile.name}</strong><small>{profile.email}</small></div><nav aria-label="마이페이지 메뉴">{[['profile', '프로필 관리'], ['posts', `내가 작성한 공고  ${mine.length}`], ['applications', `내가 지원한 공고  ${applications.length}`]].map(([key, label]) => <button key={key} className={tab === key ? 'is-selected' : ''} onClick={() => setTab(key)}>{label}</button>)}</nav><div className="account-actions"><span>계정</span><button onClick={onLogout}>로그아웃</button><button className="account-actions__withdraw" onClick={onWithdraw}>회원 탈퇴</button></div></aside>
-    <section className="dashboard-content"><p className="eyebrow">MY HAEMA</p><div className="dashboard-heading"><h1>{tab === 'profile' ? '프로필 관리' : tab === 'posts' ? '내가 작성한 공고' : '내가 지원한 공고'}</h1><p>작성한 공고와 지원 현황을 관리해요.</p></div>
+  const myApplications = applications.filter((application) => application.applicantId === 'me')
+  return <main className="dashboard"><aside className="sidebar"><div className="profile-summary"><div className="profile-avatar">플</div><span>반가워요,</span><strong>{profile.name}</strong><small>{profile.email}</small></div><nav aria-label="마이페이지 메뉴">{[['profile', '프로필 관리'], ['password', '비밀번호 변경'], ['posts', `내가 작성한 공고  ${mine.length}`], ['applications', `내가 지원한 공고  ${myApplications.length}`]].map(([key, label]) => <button key={key} className={tab === key ? 'is-selected' : ''} onClick={() => setTab(key)}>{label}</button>)}</nav><div className="account-actions"><span>계정</span><button onClick={onLogout}>로그아웃</button><button className="account-actions__withdraw" onClick={onWithdraw}>회원 탈퇴</button></div></aside>
+    <section className="dashboard-content"><p className="eyebrow">MY HAEMA</p><div className="dashboard-heading"><h1>{tab === 'profile' ? '프로필 관리' : tab === 'password' ? '비밀번호 변경' : tab === 'posts' ? '내가 작성한 공고' : '내가 지원한 공고'}</h1><p>작성한 공고와 지원 현황을 관리해요.</p></div>
       {tab === 'profile' ? <form className="profile-form" onSubmit={(event) => { event.preventDefault(); window.localStorage.setItem('haema-profile-v1', JSON.stringify(profile)); alert('프로필을 저장했어요. 이 브라우저에만 저장됩니다.') }}><div className="profile-avatar profile-avatar--large">플</div><div className="profile-fields">{[['email', '이메일'], ['major', '전공'], ['skills', '기술 스택'], ['awards', '수상 경력']].map(([key, label]) => <label key={key}>{label}<input value={profile[key]} onChange={(event) => setProfile({ ...profile, [key]: event.target.value })} /></label>)}<button className="button button--primary">변경사항 저장</button></div></form>
-      : tab === 'posts' ? <div className="owned-list">{mine.length ? mine.map((item) => <article className="owned-card" key={item.id}><div><span className={`category ${categoryClassName(item.category)}`}>{item.category} · D-{item.daysLeft}</span><button className="owned-card__open owned-card__post-title" onClick={() => onOpenPost(item)}><strong>{item.title}</strong><span>공고 상세 보기 →</span></button><p>{item.organizer}</p></div><div className="owned-card__actions"><button className="button button--outline" onClick={() => onEditPost(item)}>수정</button><button className="button button--outline button--danger" onClick={() => onDelete(item.id)}>삭제</button></div></article>) : <div className="empty-state"><strong>아직 작성한 공고가 없어요.</strong><span>새 공고를 작성하면 이곳에서 관리할 수 있어요.</span></div>}</div>
-      : <div className="owned-list">{applications.length ? applications.map((item) => <article className="owned-card" key={item.id}><div><span className="category category--프로젝트">지원 완료</span><p>지원 결과를 기다리고 있어요.</p></div><button className="owned-card__open" onClick={() => setSelectedApplication(item)}><strong>{item.title}</strong><span>내 지원서 보기 →</span></button></article>) : <div className="empty-state"><strong>아직 지원한 공고가 없어요.</strong><span>관심 있는 공고를 찾아 지원해 보세요.</span></div>}</div>}
+      : tab === 'password' ? <PasswordChangeForm />
+      : tab === 'posts' ? <div className="owned-list">{mine.length ? mine.map((item) => {
+        const applicants = applications.filter((application) => application.recruitmentId === item.id && application.applicantId !== 'me')
+        return <article className="owned-card owned-card--post" key={item.id}>
+          <div className="owned-card__details"><span className={`category ${categoryClassName(item.category)}`}>{item.category} · D-{item.daysLeft}</span><button className="owned-card__open owned-card__post-title" onClick={() => onOpenPost(item)}><strong>{item.title}</strong><span>공고 상세 보기 →</span></button><p>{item.organizer}</p>
+            <section className="applicant-section"><h3>지원자 목록 <span>{applicants.length}명</span></h3>{applicants.length ? applicants.map((application) => <article className="applicant-row" key={application.id}><div className="applicant-row__info"><strong>{application.applicantName}</strong><p>{application.introduction}</p></div><div className="applicant-row__actions">{application.status === 'pending' ? <><button className="button button--outline button--danger" onClick={() => onDecideApplication(application.id, 'rejected')}>거절</button><button className="button button--primary" onClick={() => onDecideApplication(application.id, 'accepted')}>수락</button></> : <span className={`application-status application-status--${application.status}`}>{getApplicationStatusLabel(application.status)}</span>}</div></article>) : <p className="applicant-empty">아직 지원자가 없어요.</p>}</section>
+          </div><div className="owned-card__actions"><button className="button button--outline" onClick={() => onEditPost(item)}>수정</button><button className="button button--outline button--danger" onClick={() => onDelete(item.id)}>삭제</button></div>
+        </article>
+      }) : <div className="empty-state"><strong>아직 작성한 공고가 없어요.</strong><span>새 공고를 작성하면 이곳에서 관리할 수 있어요.</span></div>}</div>
+      : <div className="owned-list">{myApplications.length ? myApplications.map((item) => <article className="owned-card" key={item.id}><div><span className={`application-status application-status--${item.status}`}>{getApplicationStatusLabel(item.status)}</span><h2>{item.title}</h2></div><button className="button button--outline" onClick={() => setSelectedApplication(item)}>지원 결과 보기 →</button></article>) : <div className="empty-state"><strong>아직 지원한 공고가 없어요.</strong><span>관심 있는 공고를 찾아 지원해 보세요.</span></div>}</div>}
     </section>
-    {selectedApplication && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedApplication(null) }}><section className="application-detail" role="dialog" aria-modal="true" aria-labelledby="application-title"><button className="modal-close modal-close--light" onClick={() => setSelectedApplication(null)} aria-label="닫기">×</button><p className="eyebrow">MY APPLICATION</p><h2 id="application-title">지원서</h2><p className="form-context">{selectedApplication.title}</p><h3>자기소개</h3><p className="application-detail__text">{selectedApplication.introduction}</p><h3>연락 수단</h3><p className="application-detail__text">{selectedApplication.contact}</p><button className="button button--outline" onClick={() => setSelectedApplication(null)}>닫기</button></section></div>}
+    {selectedApplication && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedApplication(null) }}><section className="application-detail" role="dialog" aria-modal="true" aria-labelledby="application-title"><button className="modal-close modal-close--light" onClick={() => setSelectedApplication(null)} aria-label="닫기">×</button><p className="eyebrow">APPLICATION RESULT</p><h2 id="application-title">지원 결과</h2><p className="form-context">{selectedApplication.title}</p><span className={`application-status application-status--${selectedApplication.status}`}>{getApplicationStatusLabel(selectedApplication.status)}</span><h3>내 지원서</h3><p className="application-detail__text">{selectedApplication.introduction}</p><button className="button button--outline" onClick={() => setSelectedApplication(null)}>닫기</button></section></div>}
     </main>
 }
 
-function ForgotPasswordPage({ onBack }) {
-  const [email, setEmail] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-  return <main className="auth-page"><section className="auth-brand-panel"><p className="eyebrow">ACCOUNT HELP</p><h1>다시 시작할 수 있게<br /><strong>도와드릴게요.</strong></h1><p>가입한 학교 이메일 주소를 입력해 주세요.</p></section><form className="auth-form" onSubmit={(event) => { event.preventDefault(); setSubmitted(true) }}><p className="eyebrow">RESET PASSWORD</p><h2>비밀번호 찾기</h2><p>가입한 이메일로 비밀번호 재설정 안내를 받을 수 있어요.</p><label>이메일<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@school.ac.kr" /></label>{submitted && <p className="reset-notice" role="status">요청한 이메일: {email}<br />비밀번호 재설정 이메일 발송은 백엔드 API 연결 후 사용할 수 있어요.</p>}<button className="button button--primary auth-submit">재설정 안내 요청 <span>→</span></button><p className="auth-switch"><button type="button" onClick={onBack}>로그인으로 돌아가기</button></p></form></main>
-}
-
-function AuthPage({ mode, onSwitch, onDone, onForgot }) {
+function AuthPage({ mode, onSwitch, onDone }) {
   const isSignup = mode === 'signup'
-  return <main className="auth-page"><section className="auth-brand-panel"><p className="eyebrow">UNIVERSITY TEAM BUILDING</p><h1>좋은 도전에는,<br /><strong>좋은 팀</strong>이 필요하니까.</h1><p>해커톤 · 공모전 · 프로젝트를 함께 할 팀원을 해마에서 만나보세요.</p></section><form className="auth-form" onSubmit={(event) => { event.preventDefault(); alert('데모 화면이에요. 실제 계정 인증 기능은 서버 연결이 필요합니다.'); onDone() }}><p className="eyebrow">{isSignup ? 'JOIN HAEMA' : 'WELCOME BACK'}</p><h2>{isSignup ? '새로운 도전을 시작해요.' : '다시 만나서 반가워요.'}</h2><p>{isSignup ? '이메일 인증으로 안전하게 가입할 수 있어요.' : '이메일로 로그인해 주세요.'}</p><label>이메일<input required type="email" placeholder="name@school.ac.kr" /></label><label>비밀번호<input required type="password" minLength="8" placeholder="비밀번호를 입력해 주세요" /></label>{!isSignup && <button className="forgot-password-link" type="button" onClick={onForgot}>비밀번호를 잊으셨나요?</button>}{isSignup && <><label>비밀번호 확인<input required type="password" minLength="8" placeholder="비밀번호를 다시 입력해 주세요" /></label><label>전공<input placeholder="예: 프론트엔드, 백엔드" /></label><label>기술 스택<input placeholder="예: Python, Spring Boot" /></label></>}<button className="button button--primary auth-submit">{isSignup ? '회원가입 완료' : '로그인'} <span>→</span></button><p className="auth-switch">{isSignup ? '이미 계정이 있나요?' : '아직 계정이 없나요?'} <button type="button" onClick={onSwitch}>{isSignup ? '로그인' : '회원가입'}</button></p></form></main>
+  return <main className="auth-page"><section className="auth-brand-panel"><p className="eyebrow">UNIVERSITY TEAM BUILDING</p><h1>좋은 도전에는,<br /><strong>좋은 팀</strong>이 필요하니까.</h1><p>해커톤 · 공모전 · 프로젝트를 함께 할 팀원을 해마에서 만나보세요.</p></section><form className="auth-form" onSubmit={(event) => { event.preventDefault(); alert('데모 화면이에요. 실제 계정 인증 기능은 서버 연결이 필요합니다.'); onDone() }}><p className="eyebrow">{isSignup ? 'JOIN HAEMA' : 'WELCOME BACK'}</p><h2>{isSignup ? '새로운 도전을 시작해요.' : '다시 만나서 반가워요.'}</h2><p>{isSignup ? '이메일 인증으로 안전하게 가입할 수 있어요.' : '이메일로 로그인해 주세요.'}</p><label>이메일<input required type="email" placeholder="name@school.ac.kr" /></label><label>비밀번호<input required type="password" minLength="8" placeholder="비밀번호를 입력해 주세요" /></label>{isSignup && <><label>비밀번호 확인<input required type="password" minLength="8" placeholder="비밀번호를 다시 입력해 주세요" /></label><label>전공<input placeholder="예: 프론트엔드, 백엔드" /></label><label>기술 스택<input placeholder="예: Python, Spring Boot" /></label></>}<button className="button button--primary auth-submit">{isSignup ? '회원가입 완료' : '로그인'} <span>→</span></button><p className="auth-switch">{isSignup ? '이미 계정이 있나요?' : '아직 계정이 없나요?'} <button type="button" onClick={onSwitch}>{isSignup ? '로그인' : '회원가입'}</button></p></form></main>
 }
 
 export default function App() {
   const [page, setPage] = useState('board')
   const [recruitments, setRecruitments] = useState(loadRecruitments)
-  const [applications, setApplications] = useState(() => readStorage(APPLICATIONS_KEY, []))
+  const [applications, setApplications] = useState(loadApplications)
   const [selected, setSelected] = useState(null)
   const [applying, setApplying] = useState(null)
   const [editingRecruitment, setEditingRecruitment] = useState(null)
@@ -220,13 +287,18 @@ export default function App() {
     setPage('create')
   }
   function submitApplication(form) {
-    setApplications((current) => [{ ...form, id: `application-${Date.now()}`, title: applying.title }, ...current])
+    setApplications((current) => [{ ...form, id: `application-${Date.now()}`, recruitmentId: applying.id, title: applying.title, applicantId: 'me', applicantName: '플랑크톤', status: 'pending' }, ...current])
     setApplying(null)
     setSelected(null)
     alert('지원서를 저장했어요. (데모 화면에서는 이 브라우저에만 저장됩니다.)')
   }
   function deleteRecruitment(id) {
-    if (window.confirm('이 공고를 삭제할까요?')) setRecruitments((current) => current.filter((item) => item.id !== id))
+    if (!window.confirm('이 공고를 삭제할까요?')) return
+    setRecruitments((current) => current.filter((item) => item.id !== id))
+    setApplications((current) => current.filter((application) => application.recruitmentId !== id))
+  }
+  function decideApplication(id, status) {
+    setApplications((current) => current.map((application) => application.id === id ? { ...application, status } : application))
   }
   function logOut() {
     if (!window.confirm('로그아웃할까요?')) return
@@ -267,9 +339,8 @@ export default function App() {
   return <><Header page={page} onNavigate={(nextPage) => { if (nextPage !== 'create') setEditingRecruitment(null); setPage(nextPage) }} />
     {page === 'board' && <BoardPage recruitments={recruitments} onCreate={startNewRecruitment} onOpen={setSelected} />}
     {page === 'create' && <CreatePage initialRecruitment={editingRecruitment} onSave={saveRecruitment} onCancel={() => { setPage(editingRecruitment ? 'mypage' : 'board'); setEditingRecruitment(null) }} />}
-    {page === 'mypage' && <MyPage recruitments={recruitments} applications={applications} onDelete={deleteRecruitment} onOpenPost={setSelected} onEditPost={startEditingRecruitment} onLogout={logOut} onWithdraw={withdrawAccount} />}
-    {page === 'forgot-password' && <ForgotPasswordPage onBack={() => setPage('login')} />}
-    {(page === 'login' || page === 'signup') && <AuthPage mode={page} onSwitch={() => setPage(page === 'login' ? 'signup' : 'login')} onDone={() => setPage('board')} onForgot={() => setPage('forgot-password')} />}
+    {page === 'mypage' && <MyPage recruitments={recruitments} applications={applications} onDelete={deleteRecruitment} onOpenPost={setSelected} onEditPost={startEditingRecruitment} onDecideApplication={decideApplication} onLogout={logOut} onWithdraw={withdrawAccount} />}
+    {(page === 'login' || page === 'signup') && <AuthPage mode={page} onSwitch={() => setPage(page === 'login' ? 'signup' : 'login')} onDone={() => setPage('board')} />}
     <Footer onNavigate={setPage} />
     <RecruitmentModal recruitment={selected} isOwner={selected?.owner === 'me'} onClose={() => setSelected(null)} onApply={(item) => { if (item.owner !== 'me') setApplying(item) }} />
     <ApplyModal recruitment={applying} onClose={() => setApplying(null)} onSubmit={submitApplication} />
