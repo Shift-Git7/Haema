@@ -7,6 +7,7 @@ import RecruitmentCard from './components/RecruitmentCard.jsx'
 import RecruitmentModal from './components/RecruitmentModal.jsx'
 import ApplyModal from './components/ApplyModal.jsx'
 import ApplicantDetailModal from './components/ApplicantDetailModal.jsx'
+import AccountActionModal from './components/AccountActionModal.jsx'
 import { categories, categoryClassName, sampleRecruitments } from './data/recruitments.js'
 
 const STORAGE_KEY = 'haema-recruitments-v1'
@@ -15,8 +16,8 @@ const SAMPLE_VERSION_KEY = 'haema-sample-version'
 const APPLICATIONS_SEED_VERSION_KEY = 'haema-applications-seed-version'
 
 const sampleApplications = [
-  { id: 'sample-application-1', recruitmentId: 'junction-asia', title: '2025 Junction Asia 함께할 프론트엔드 팀원을 찾아요', applicantId: 'demo-student-1', skills: 'React, TypeScript, Figma', awards: '교내 해커톤 최우수상', introduction: 'React 프로젝트를 진행한 경험이 있어요. 팀과 함께 아이디어를 빠르게 구현하고 싶습니다.', status: 'pending' },
-  { id: 'sample-application-2', recruitmentId: 'junction-asia', title: '2025 Junction Asia 함께할 프론트엔드 팀원을 찾아요', applicantId: 'demo-student-2', skills: 'Figma, UI 디자인, React', awards: '2025 교내 디자인 공모전 우수상', introduction: '디자인 시스템을 적용한 웹 앱을 만들어 봤어요. 맡은 일을 책임감 있게 끝내겠습니다.', status: 'pending' },
+  { id: 'sample-application-1', recruitmentId: 'junction-asia', title: '2025 Junction Asia 함께할 프론트엔드 팀원을 찾아요', applicantId: 'demo-student-1', major: '소프트웨어 개발과', skills: 'React, TypeScript, Figma', awards: '교내 해커톤 최우수상', introduction: 'React 프로젝트를 진행한 경험이 있어요. 팀과 함께 아이디어를 빠르게 구현하고 싶습니다.', status: 'pending' },
+  { id: 'sample-application-2', recruitmentId: 'junction-asia', title: '2025 Junction Asia 함께할 프론트엔드 팀원을 찾아요', applicantId: 'demo-student-2', major: '디지털 디자인과', skills: 'Figma, UI 디자인, React', awards: '2025 교내 디자인 공모전 우수상', introduction: '디자인 시스템을 적용한 웹 앱을 만들어 봤어요. 맡은 일을 책임감 있게 끝내겠습니다.', status: 'pending' },
   { id: 'sample-my-application-1', recruitmentId: 'kosac', title: '대학생 광고 공모전 기획·마케팅 팀원 모집', applicantId: 'me', introduction: '시장 조사 경험을 살려 아이디어를 함께 구체화하고 싶습니다.', status: 'accepted' },
   { id: 'sample-my-application-2', recruitmentId: 'campus-app', title: '캠퍼스 생활 개선 앱, 백엔드 개발자를 찾습니다', applicantId: 'me', introduction: '사용하기 쉬운 교내 서비스를 팀과 함께 만들고 싶어요.', status: 'pending' },
 ]
@@ -70,6 +71,7 @@ function loadApplications() {
       ...sampleApplications.find((example) => example.id === application.id),
       ...application,
       applicantId: application.applicantId ?? 'me',
+      major: application.major ?? '',
       status: application.status ?? 'pending',
     }
   })
@@ -211,13 +213,14 @@ function getApplicationStatusLabel(status) {
 }
 
 function MyPage({ recruitments, applications, onDelete, onOpenPost, onEditPost, onDecideApplication, onLogout, onWithdraw }) {
-  const [tab, setTab] = useState('posts')
+  const [tab, setTab] = useState('profile')
   const [selectedApplication, setSelectedApplication] = useState(null)
+  const [accountAction, setAccountAction] = useState(null)
   const [selectedApplicant, setSelectedApplicant] = useState(null)
   const [profile, setProfile] = useState(() => readStorage('haema-profile-v1', { name: '플랑크톤', email: 'haemin@university.ac.kr', major: '프론트엔드, 백엔드', skills: 'Python, Spring Boot', awards: '' }))
   const mine = recruitments.filter((item) => item.owner === 'me')
   const myApplications = applications.filter((application) => application.applicantId === 'me')
-  return <main className="dashboard"><aside className="sidebar"><div className="profile-summary"><div className="profile-avatar">플</div><span>반가워요,</span><strong>{profile.name}</strong><small>{profile.email}</small></div><nav aria-label="마이페이지 메뉴">{[['profile', '프로필 관리'], ['posts', `내가 작성한 공고  ${mine.length}`], ['applications', `내가 지원한 공고  ${myApplications.length}`]].map(([key, label]) => <button key={key} className={tab === key ? 'is-selected' : ''} onClick={() => setTab(key)}>{label}</button>)}</nav><div className="account-actions"><span>계정</span><button onClick={onLogout}>로그아웃</button><button className="account-actions__withdraw" onClick={onWithdraw}>회원 탈퇴</button></div></aside>
+  return <main className="dashboard"><aside className="sidebar"><div className="profile-summary"><div className="profile-avatar">플</div><span>반가워요,</span><strong>{profile.name}</strong><small>{profile.email}</small></div><nav aria-label="마이페이지 메뉴">{[['profile', '프로필 관리'], ['posts', `내가 작성한 공고  ${mine.length}`], ['applications', `내가 지원한 공고  ${myApplications.length}`]].map(([key, label]) => <button key={key} className={tab === key ? 'is-selected' : ''} onClick={() => setTab(key)}>{label}</button>)}</nav><div className="account-actions"><span>계정</span><button onClick={() => setAccountAction('logout')}>로그아웃</button><button className="account-actions__withdraw" onClick={() => setAccountAction('withdraw')}>회원 탈퇴</button></div></aside>
     <section className="dashboard-content"><p className="eyebrow">MY HAEMA</p><div className="dashboard-heading"><h1>{tab === 'profile' ? '프로필 관리' : tab === 'posts' ? '내가 작성한 공고' : '내가 지원한 공고'}</h1><p>작성한 공고와 지원 현황을 관리해요.</p></div>
       {tab === 'profile' ? <form className="profile-form" onSubmit={(event) => { event.preventDefault(); window.localStorage.setItem('haema-profile-v1', JSON.stringify(profile)); alert('프로필을 저장했어요. 이 브라우저에만 저장됩니다.') }}><div className="profile-avatar profile-avatar--large">플</div><div className="profile-fields">{[['email', '이메일'], ['major', '전공'], ['skills', '기술 스택'], ['awards', '수상 경력']].map(([key, label]) => <label key={key}>{label}<input value={profile[key]} onChange={(event) => setProfile({ ...profile, [key]: event.target.value })} /></label>)}<button className="button button--primary">변경사항 저장</button></div></form>
       : tab === 'posts' ? <div className="owned-list">{mine.length ? mine.map((item) => {
@@ -231,6 +234,7 @@ function MyPage({ recruitments, applications, onDelete, onOpenPost, onEditPost, 
       : <div className="owned-list">{myApplications.length ? myApplications.map((item) => <article className="owned-card" key={item.id}><div><span className={`application-status application-status--${item.status}`}>{getApplicationStatusLabel(item.status)}</span><h2>{item.title}</h2></div><button className="button button--outline" onClick={() => setSelectedApplication(item)}>지원 결과 보기 →</button></article>) : <div className="empty-state"><strong>아직 지원한 공고가 없어요.</strong><span>관심 있는 공고를 찾아 지원해 보세요.</span></div>}</div>}
     </section>
     <ApplicantDetailModal applicant={selectedApplicant} onClose={() => setSelectedApplicant(null)} />
+    {accountAction && <AccountActionModal mode={accountAction} email={profile.email} onClose={() => setAccountAction(null)} onConfirm={(password) => accountAction === 'logout' ? onLogout() : onWithdraw(profile.email, password)} />}
     {selectedApplication && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedApplication(null) }}><section className="application-detail" role="dialog" aria-modal="true" aria-labelledby="application-title"><button className="modal-close modal-close--light" onClick={() => setSelectedApplication(null)} aria-label="닫기">×</button><p className="eyebrow">APPLICATION RESULT</p><h2 id="application-title">지원 결과</h2><p className="form-context">{selectedApplication.title}</p><span className={`application-status application-status--${selectedApplication.status}`}>{getApplicationStatusLabel(selectedApplication.status)}</span><h3>내 지원서</h3><p className="application-detail__text">{selectedApplication.introduction}</p><button className="button button--outline" onClick={() => setSelectedApplication(null)}>닫기</button></section></div>}
     </main>
 }
@@ -274,8 +278,8 @@ export default function App() {
     setPage('create')
   }
   function submitApplication(form) {
-    const applicantProfile = readStorage('haema-profile-v1', { skills: '', awards: '' })
-    setApplications((current) => [{ ...form, id: `application-${Date.now()}`, recruitmentId: applying.id, title: applying.title, applicantId: 'me', skills: applicantProfile.skills ?? '', awards: applicantProfile.awards ?? '', status: 'pending' }, ...current])
+    const applicantProfile = readStorage('haema-profile-v1', { major: '', skills: '', awards: '' })
+    setApplications((current) => [{ ...form, id: `application-${Date.now()}`, recruitmentId: applying.id, title: applying.title, applicantId: 'me', major: applicantProfile.major ?? '', skills: applicantProfile.skills ?? '', awards: applicantProfile.awards ?? '', status: 'pending' }, ...current])
     setApplying(null)
     setSelected(null)
     alert('지원서를 저장했어요. (데모 화면에서는 이 브라우저에만 저장됩니다.)')
@@ -289,29 +293,31 @@ export default function App() {
     setApplications((current) => current.map((application) => application.id === id ? { ...application, status } : application))
   }
   function logOut() {
-    if (!window.confirm('로그아웃할까요?')) return
     window.localStorage.removeItem('haema-access-token')
     window.localStorage.removeItem('haema-user-id')
     setPage('login')
   }
-  async function withdrawAccount() {
-    if (!window.confirm('회원 탈퇴를 진행할까요? 탈퇴하면 계정 정보와 작성한 공고, 지원 내역을 복구할 수 없어요.')) return
+  async function withdrawAccount(email, password) {
+    const savedToken = window.localStorage.getItem('haema-access-token')
+    if (savedToken) {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+      const loginResponse = await fetch(`${apiBaseUrl}/common/log-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const loginResult = await loginResponse.json().catch(() => ({}))
+      if (!loginResponse.ok || !loginResult.accessToken) {
+        throw new Error(loginResult.error || '비밀번호를 확인해 주세요.')
+      }
 
-    const accessToken = window.localStorage.getItem('haema-access-token')
-    if (accessToken) {
-      try {
-        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
-        const response = await fetch(`${apiBaseUrl}/common/account`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-        if (!response.ok) {
-          const result = await response.json().catch(() => ({}))
-          throw new Error(result.error || '회원 탈퇴를 처리하지 못했어요.')
-        }
-      } catch (error) {
-        window.alert(error.message || '백엔드 서버에 연결하지 못했어요.')
-        return
+      const response = await fetch(`${apiBaseUrl}/common/account`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${loginResult.accessToken}` },
+      })
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}))
+        throw new Error(result.error || '회원 탈퇴를 처리하지 못했어요.')
       }
     }
 
@@ -321,7 +327,7 @@ export default function App() {
     window.localStorage.removeItem('haema-access-token')
     window.localStorage.removeItem('haema-user-id')
     setPage('login')
-    window.alert(accessToken ? '회원 탈퇴가 완료됐어요.' : '미리보기 계정의 공고와 지원 내역을 지웠어요. 실제 계정 탈퇴는 로그인과 백엔드 연결 후 사용할 수 있어요.')
+    window.alert(savedToken ? '회원 탈퇴가 완료됐어요.' : '미리보기 계정의 공고와 지원 내역을 지웠어요. 실제 계정 탈퇴는 로그인과 백엔드 연결 후 사용할 수 있어요.')
   }
 
   return <><Header page={page} onNavigate={(nextPage) => { if (nextPage !== 'create') setEditingRecruitment(null); setPage(nextPage) }} />
