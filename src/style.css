@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+
+:root { font-family: 'DM Sans', 'Noto Sans KR', sans-serif; color: #18342c; background: #f7f8f4; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+a { color: inherit; text-decoration: none; }
+.page { max-width: 1180px; margin: auto; padding: 0 48px; }
+.nav { height: 82px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e7eae3; }
+.brand { font-size: 27px; font-weight: 800; letter-spacing: -1.5px; }.brand span, footer span { color: #f09a63; }
+.nav-links { display: flex; gap: 34px; color: #64726c; font-size: 14px; }.nav-links a:hover { color: #18342c; }
+.login { border: 1px solid #d9dfd8; border-radius: 999px; background: transparent; padding: 10px 20px; color: #18342c; font: inherit; cursor: pointer; }
+.hero { min-height: 520px; padding: 112px 0 78px; position: relative; }
+.eyebrow { color: #6b8f78; font-weight: 700; font-size: 12px; letter-spacing: 1.4px; margin: 0 0 20px; }
+h1 { font-size: clamp(42px, 6vw, 68px); line-height: 1.28; letter-spacing: -3px; margin: 0; font-weight: 800; }
+h1 em { color: #e9945d; font-style: normal; }.intro { color: #738079; margin: 22px 0 30px; font-size: 16px; }
+.cta { display: inline-flex; align-items: center; gap: 26px; background: #234d3d; color: white; padding: 15px 21px; border-radius: 8px; font-size: 14px; font-weight: 600; }.cta span { font-size: 18px; }
+.hero-note { position: absolute; right: 6%; bottom: 100px; color: #94a198; font-size: 13px; }.dot { display: inline-block; background: #e9945d; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+.list { padding: 36px 0 72px; border-top: 1px solid #e7eae3; display: flex; align-items: end; justify-content: space-between; gap: 24px; }.list .eyebrow { margin-bottom: 9px; }h2 { margin: 0; font-size: 25px; letter-spacing: -1px; }.empty { color: #89958e; font-size: 14px; margin: 0 0 3px; }
+footer { border-top: 1px solid #e7eae3; color: #87928b; padding: 23px 0 32px; font-size: 12px; }
+@media (max-width: 650px) { .page { padding: 0 22px; }.nav { height: 70px; }.nav-links { gap: 14px; font-size: 12px; }.login { padding: 8px 13px; font-size: 12px; }.hero { min-height: 485px; padding-top: 100px; } h1 { letter-spacing: -2px; }.hero-note { left: 0; right: auto; bottom: 55px; }.list { align-items: start; flex-direction: column; padding: 32px 0 44px; } }
