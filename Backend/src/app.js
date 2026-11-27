@@ -6,6 +6,7 @@ import { boardRouter } from './routes/board.js';
 import { profileRouter } from './routes/profile.js';
 import { accountRouter } from './routes/account.js';
 import { hostRouter } from './routes/host.js';
+import { applicationRouter } from './routes/application.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -18,7 +19,10 @@ app.use('/common', authRouter);
 app.use('/common', boardRouter);
 app.use('/common', accountRouter);
 app.use('/common', profileRouter);
+// 호스트(모집자) 전용 엔드포인트
 app.use('/host', hostRouter);
+// 지원자 전용 지원/상태/취소 엔드포인트
+app.use('/app', applicationRouter);
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: '올바른 JSON이 필요합니다.' });
