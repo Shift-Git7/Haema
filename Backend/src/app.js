@@ -5,6 +5,7 @@ import { authRouter } from './routes/auth.js';
 import { boardRouter } from './routes/board.js';
 import { profileRouter } from './routes/profile.js';
 import { accountRouter } from './routes/account.js';
+import { hostRouter } from './routes/host.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -17,8 +18,11 @@ app.use('/common', authRouter);
 app.use('/common', boardRouter);
 app.use('/common', accountRouter);
 app.use('/common', profileRouter);
+app.use('/host', hostRouter);
 
 app.use((err, _req, res, _next) => {
+  if (err.type === 'entity.parse.failed') return res.status(400).json({ error: '올바른 JSON이 필요합니다.' });
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: '요청 크기가 너무 큽니다.' });
   console.error('Unhandled API error:', err?.message ?? 'unknown');
   return res.status(500).json({ error: '서버에서 요청을 처리하지 못했습니다.' });
 });

@@ -1,10 +1,10 @@
-# Haema Backend (Auth and profile)
+# Haema Backend
 
-Node.js + Express backend for Haema. Supabase Auth handles account creation, email confirmation, password sign-in, and access tokens. This backend covers authentication, private profile/record endpoints, authenticated board reads, and account withdrawal. Board creation and application submission are not implemented yet.
+Node.js + Express backend for Haema. Supabase Auth handles account creation, email confirmation, password sign-in, and access tokens. This backend covers authentication, private profile/record endpoints, authenticated board reads, and account withdrawal. Host board management and application review are implemented. Applicant submission APIs remain a separate scope.
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22+
 - A Supabase project
 - School email addresses ending in `dsm.hs.kr`
 
@@ -15,7 +15,7 @@ Node.js + Express backend for Haema. Supabase Auth handles account creation, ema
 3. Copy `.env.example` to `.env` and set `SUPABASE_SERVICE_ROLE_KEY`. Board reads and My Page activity queries use this server-only secret; never send it to the frontend.
 4. In Authentication settings, enable email signups and turn on **Confirm email**.
 5. In Authentication > URL Configuration, configure the frontend Site URL and allowed Redirect URLs. If using a custom confirmation destination, set `EMAIL_REDIRECT_URL` to that URL and allow it in Supabase.
-6. Open SQL Editor and run both files in `supabase/migrations` in timestamp order.
+6. Open SQL Editor and run all files in `supabase/migrations` in timestamp order. If the two existing migrations are already applied, run only `202611270001_host_management.sql`.
 7. For real user delivery, configure custom SMTP in Supabase Auth. Built-in email delivery may be rate-limited.
 8. Install and run:
 
@@ -89,5 +89,18 @@ This backend does not use Sequelize. Supabase Auth and `supabase-js` cover the c
 
 `GET /common/mypage/:id` now returns `profile`, `createdBoards`, and `appliedBoards`. The requested ID must match the verified access-token user. Each applied board includes the application status (`pending`, `accepted`, or `rejected`) and its Korean display label. Lists are empty until board and application records exist.
 
-The board/application migration creates read models for these lists. Board creation and application submission APIs are outside this implementation scope.
+The board/application migration creates read models for these lists. Host board creation and application review are now available under `/host`. Application submission remains a separate scope.
 
+
+## Host management APIs
+
+See [모집자 API 문서](docs/host-api.md) for request/response examples, migration instructions and email worker setup.
+
+- `GET/POST /host/board`
+- `GET/PATCH/DELETE /host/board/:id`
+- `GET /host/app/list?boardId=<board UUID>`
+- `GET/PATCH /host/app/:id`
+
+All host operations use the existing bearer-token authentication and the server-only service-role client. Owner IDs come from the verified token. Application decisions and capacity changes use service-only SQL functions with ownership checks and board row locks. The new migration does not replace the existing board, application or profile tables.
+
+Result notification emails are queued transactionally. Configure SMTP and schedule `npm run worker` separately; the API process does not send them automatically. Live Supabase/SMTP integration still needs project credentials.
