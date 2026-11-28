@@ -14,14 +14,12 @@ export default function Brand({ footer = false, onHome }) {
       }
     >
       <img
-        src="/images/logo/logo.svg"
-        alt=""
+        src="/images/logo.svg"
+        alt="해마 로고"
         onError={(event) => {
           event.currentTarget.style.display = "none";
         }}
       />
-      <span className="brand__name">해마</span>
-      <span className="brand__english">HAEMA</span>
     </a>
   );
 }
