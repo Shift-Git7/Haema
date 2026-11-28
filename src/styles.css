@@ -50,3 +50,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
   .brand img{width:min(270px,64vw);height:104px}
   .brand--footer img{width:min(220px,52vw);height:80px}
 }
+
+.auth-form textarea,.profile-fields textarea{width:100%;min-height:116px;border:1px solid #dfe7ed;background:#fbfcfd;border-radius:5px;padding:12px;color:#243e58;font-size:13px;outline:0;resize:vertical}
+.auth-form textarea:focus,.profile-fields textarea:focus{border-color:#51bbc1;box-shadow:0 0 0 3px #4ebac11a}
+.auth-form textarea::placeholder,.profile-fields textarea::placeholder{color:#a3aeba;font-weight:400}
