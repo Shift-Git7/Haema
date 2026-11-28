@@ -17,13 +17,6 @@ export default function RecruitmentCard({ recruitment, onOpen }) {
       </button>
       <p className="recruitment-card__organizer">{recruitment.organizer}</p>
       <p className="recruitment-card__description">{recruitment.description}</p>
-      <div className="tag-list">
-        {recruitment.roles.map((role) => (
-          <span className="tag" key={role}>
-            #{role}
-          </span>
-        ))}
-      </div>
       <div className="recruitment-card__bottom">
         <span>♧ &nbsp;{formatPeople(recruitment.people)} 모집</span>
         <button

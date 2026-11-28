@@ -14,7 +14,7 @@ export default function Brand({ footer = false, onHome }) {
       }
     >
       <img
-        src="/images/logo.svg"
+        src="/images/logo/logo.svg"
         alt=""
         onError={(event) => {
           event.currentTarget.style.display = "none";

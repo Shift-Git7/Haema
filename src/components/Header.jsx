@@ -22,10 +22,10 @@ export default function Header({ page, onNavigate }) {
         <button
           className="account-pill"
           onClick={() => onNavigate("mypage")}
-          aria-label="플랑크톤 마이페이지 열기"
+          aria-label="마이페이지 열기"
         >
-          <span className="account-pill__avatar">플</span>
-          <span>플랑크톤</span>
+          <span className="account-pill__avatar">계</span>
+          <span>마이페이지</span>
           <span aria-hidden="true">›</span>
         </button>
       </div>

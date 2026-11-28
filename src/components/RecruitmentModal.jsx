@@ -46,14 +46,6 @@ export default function RecruitmentModal({
             >
               대회 공식 페이지 바로가기 ↗
             </a>
-            <h3>이런 팀원을 찾고 있어요</h3>
-            <div className="tag-list">
-              {recruitment.roles.map((role) => (
-                <span className="tag" key={role}>
-                  #{role}
-                </span>
-              ))}
-            </div>
             <h3>연락 수단</h3>
             <p>{recruitment.contact}</p>
           </div>
@@ -80,19 +72,6 @@ export default function RecruitmentModal({
             {isOwner && (
               <p className="owner-note">작성한 공고에는 지원할 수 없어요.</p>
             )}
-            <figure className="recruitment-poster">
-              <img
-                src={recruitment.image || "/images/sample-poster.svg"}
-                alt={
-                  recruitment.image
-                    ? "모집 공고 첨부 사진"
-                    : "해마 모집 공고 예시 이미지"
-                }
-              />
-              <figcaption>
-                {recruitment.image ? "첨부 이미지" : "공고 이미지 예시"}
-              </figcaption>
-            </figure>
           </aside>
         </div>
       </section>
