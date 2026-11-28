@@ -38,6 +38,15 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
 @media(max-width:620px){.auth-brand-panel .brand{margin-bottom:20px}}
 
 /* Use the full shared logo artwork in the header, footer, and auth panel. */
-.brand img{width:min(180px,36vw);height:54px;object-fit:contain;object-position:left center}
-.brand--footer img{width:min(160px,36vw);height:46px}
-@media(max-width:620px){.brand img{width:min(145px,42vw);height:44px}.brand--footer img{width:min(132px,42vw);height:40px}}
+.topbar{height:158px}
+.brand img{width:min(360px,48vw);height:136px;object-fit:contain;object-position:left center}
+.brand--footer img{width:min(300px,44vw);height:108px}
+@media(max-width:620px){
+  .topbar{height:142px}
+  .topbar__inner{grid-template-columns:1fr auto;grid-template-rows:1fr auto;padding:6px 16px}
+  .topbar__inner>.brand{grid-column:1/-1;grid-row:1}
+  .topbar__nav{grid-column:1;grid-row:2;height:38px}
+  .topbar__inner>.account-pill{grid-column:2;grid-row:2}
+  .brand img{width:min(270px,64vw);height:104px}
+  .brand--footer img{width:min(220px,52vw);height:80px}
+}
